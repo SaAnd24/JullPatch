@@ -13,6 +13,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Unpack project zip if needed
+        run: |
+          if [ -z "$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)" ]; then
+            Z=$(find . -maxdepth 2 -name '*.zip' -not -path './.git/*' | head -n 1)
+            [ -n "$Z" ] && unzip -q "$Z" -d _project
+          fi
+
       - name: Locate project
         id: proj
         run: |
@@ -29,6 +36,13 @@ jobs:
     needs: native-tests
     steps:
       - uses: actions/checkout@v4
+
+      - name: Unpack project zip if needed
+        run: |
+          if [ -z "$(find . -name settings.gradle.kts -not -path './.git/*' | head -n 1)" ]; then
+            Z=$(find . -maxdepth 2 -name '*.zip' -not -path './.git/*' | head -n 1)
+            [ -n "$Z" ] && unzip -q "$Z" -d _project
+          fi
 
       - name: Locate project
         id: proj
