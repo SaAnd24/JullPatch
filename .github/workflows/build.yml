@@ -12,8 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Locate project
+        id: proj
+        run: |
+          S=$(find . -name settings.gradle.kts -not -path "./.git/*" | head -n 1)
+          if [ -z "$S" ]; then echo "settings.gradle.kts not found"; find . -maxdepth 3 -not -path "./.git/*"; exit 1; fi
+          echo "dir=$(dirname "$S")" >> "$GITHUB_OUTPUT"
+
       - name: Run VCDIFF/LZMA engine tests (host)
-        run: bash tools/native-test/run_tests.sh
+        run: bash "${{ steps.proj.outputs.dir }}/tools/native-test/run_tests.sh"
 
   android:
     name: Build debug APK
@@ -21,6 +29,12 @@ jobs:
     needs: native-tests
     steps:
       - uses: actions/checkout@v4
+
+      - name: Locate project
+        id: proj
+        run: |
+          S=$(find . -name settings.gradle.kts -not -path "./.git/*" | head -n 1)
+          echo "dir=$(dirname "$S")" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
         with:
@@ -32,18 +46,19 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "ndk;26.1.10909125" "cmake;3.22.1" "platforms;android-35" "build-tools;35.0.0"
 
-      # The repo has no gradle-wrapper.jar, so use Gradle 8.9 directly.
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
 
       - name: Unit tests
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: gradle :app:testDebugUnitTest --stacktrace
 
       - name: Assemble debug APK
+        working-directory: ${{ steps.proj.outputs.dir }}
         run: gradle :app:assembleDebug --stacktrace
 
       - uses: actions/upload-artifact@v4
         with:
           name: JullPatch-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.proj.outputs.dir }}/app/build/outputs/apk/debug/*.apk
